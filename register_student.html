@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h1>Register Student</h1>
+    <p class="subtitle">Assign personal details and capture face data</p>
+</header>
+
+<div class="registration-container" style="max-width: 800px; margin: 0 auto;">
+    <div class="table-section" style="margin-bottom: 2rem;">
+        <h3 style="margin-bottom: 2rem; text-align: center;">Student Details</h3>
+        <form method="POST" action="{{ url_for('register_student') }}">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="form-group">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" name="name" class="form-control" placeholder="Enter full name" required {% if
+                        request.args.get('name') %}value="{{ request.args.get('name') }}" readonly{% endif %}>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Student ID</label>
+                    <input type="text" name="username" class="form-control" placeholder="Enter student ID" required {%
+                        if request.args.get('username') %}value="{{ request.args.get('username') }}" readonly{% endif
+                        %}>
+                </div>
+            </div>
+
+            {% if not request.args.get('step') %}
+            <div class="form-group" style="max-width: 400px; margin: 1.5rem auto 0;">
+                <label class="form-label">Temporary Password</label>
+                <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+            </div>
+            <div style="text-align: center; margin-top: 2rem;">
+                <button type="submit" class="btn-submit" style="max-width: 300px;">Proceed to Camera</button>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    {% if request.args.get('step') == 'capture' %}
+    <div class="camera-section"
+        style="background: var(--card-bg); padding: 2rem; border-radius: 20px; border: 1px solid var(--border-inner); text-align: center;">
+        <h3 style="margin-bottom: 1.5rem;">Face Capture</h3>
+
+        <div class="video-wrap"
+            style="max-width: 640px; margin: 0 auto; overflow: hidden; border-radius: 15px; border: 2px solid var(--border-inner);">
+            <video id="videoElement" autoplay playsinline
+                style="width: 100%; display: block; transform: scaleX(-1);"></video>
+            <canvas id="canvasElement" style="display:none;"></canvas>
+        </div>
+
+        <div id="captureStatus" style="margin-top: 1.5rem; font-weight: 500; color: var(--text-muted);">
+            Position face in the center and press 'S'
+        </div>
+
+        <div class="controls-guide"
+            style="display: flex; justify-content: center; gap: 2rem; margin-top: 2rem; padding: 1.5rem; background: rgba(0,0,0,0.2); border-radius: 12px;">
+            <div style="display: flex; align-items: center; gap: 0.8rem;">
+                <kbd
+                    style="background: var(--primary); color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold;">S</kbd>
+                <span>Save Face</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.8rem;">
+                <kbd
+                    style="background: #ff4d4d; color: white; padding: 4px 10px; border-radius: 6px; font-weight: bold;">Q</kbd>
+                <span>Finish Session</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 2.5rem;">
+            <form id="finishForm" action="{{ url_for('finish_registration') }}" method="POST">
+                <input type="hidden" name="user_id" value="{{ request.args.get('user_id') }}">
+                <button type="submit" class="btn-submit" id="finishBtn"
+                    style="background: transparent; color: var(--text-main); border: 1px solid var(--border-inner); width: auto; padding: 0.8rem 2rem;">
+                    Close Camera & Return
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if request.args.get('step') == 'capture' %}
+<script>
+    const userId = "{{ request.args.get('user_id') }}";
+    let isCaptured = false;
+    let isProcessing = false;
+
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('canvasElement');
+    const ctx = canvas.getContext('2d');
+
+    // Start camera stream
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 } } })
+            .then(function (stream) {
+                video.srcObject = stream;
+            })
+            .catch(function (error) {
+                console.error("Camera access denied or error:", error);
+                document.getElementById('captureStatus').innerText = "Camera access required. Please allow and refresh.";
+                document.getElementById('captureStatus').style.color = "#ff4d4d";
+            });
+    } else {
+        document.getElementById('captureStatus').innerText = "Browser doesn't support getUserMedia API";
+        document.getElementById('captureStatus').style.color = "#ff4d4d";
+    }
+
+    function stopStream() {
+        if (video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+        }
+    }
+
+    document.addEventListener('keydown', function (event) {
+        if (isProcessing) return;
+        const key = event.key.toLowerCase();
+
+        if (key === 's') {
+            captureFrame();
+        } else if (key === 'q') {
+            stopStream();
+            document.getElementById('finishForm').submit();
+        }
+    });
+
+    document.getElementById('finishForm').addEventListener('submit', stopStream);
+
+    function captureFrame() {
+        if (isProcessing) return;
+        isProcessing = true;
+
+        const statusEl = document.getElementById('captureStatus');
+        statusEl.innerText = "Capturing & Encoding... Please stay still.";
+        statusEl.style.color = "var(--primary)";
+        document.querySelector('.video-wrap').style.border = "4px solid var(--primary)";
+
+        const targetWidth = 640;
+        const scale = Math.min(1, targetWidth / video.videoWidth);
+        canvas.width = video.videoWidth * scale;
+        canvas.height = video.videoHeight * scale;
+        // Don't draw mirrored to canvas, just the raw frame
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataURL = canvas.toDataURL('image/jpeg', 0.85);
+
+        fetch(`/capture_face/${userId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: dataURL })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    isCaptured = true;
+                    statusEl.innerText = "Face Saved! Registration complete.";
+                    statusEl.style.color = "#4CAF50";
+
+                    // Visual feedback
+                    document.querySelector('.video-wrap').style.border = "4px solid #4CAF50";
+
+                    // Auto-finish after 2 seconds to ensure camera is released and user sees success
+                    setTimeout(() => {
+                        stopStream();
+                        document.getElementById('finishForm').submit();
+                    }, 2000);
+                } else {
+                    isProcessing = false;
+                    statusEl.innerText = data.error || "Capture failed. Try again.";
+                    statusEl.style.color = "#ff4d4d";
+                    document.querySelector('.video-wrap').style.border = "4px solid #ff4d4d";
+                }
+            })
+            .catch(err => {
+                isProcessing = false;
+                statusEl.innerText = "Server error. Check if backend is reachable.";
+                statusEl.style.color = "#ff4d4d";
+            });
+    }
+</script>
+{% endif %}
+{% endblock %}

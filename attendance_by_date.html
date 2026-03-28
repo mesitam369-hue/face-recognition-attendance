@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h1>Daily Attendance Report</h1>
+    <p class="subtitle">View period-wise attendance for a specific date</p>
+</header>
+
+<div class="stats-grid" style="margin-bottom: 2rem;">
+    <div class="stat-card" style="display: flex; flex-direction: column; justify-content: center;">
+        <div class="stat-label">Select Date</div>
+        <form method="GET" action="{{ url_for('attendance_by_date') }}"
+            style="display: flex; gap: 1rem; align-items: flex-end;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <input type="date" id="date" name="date" value="{{ selected_date }}" class="form-control"
+                    style="width: 200px;" required>
+            </div>
+            <button type="submit" class="btn-login" style="padding: 0.8rem 1.5rem;"><i class="fas fa-search"></i> View
+                Attendance</button>
+        </form>
+    </div>
+</div>
+
+<div class="table-section">
+    <div class="table-header">Attendance for {{ day_name }}, {{ selected_date }}</div>
+    <div style="overflow-x: auto;">
+        <table class="timetable-grid">
+            <thead>
+                <tr>
+                    <th style="min-width: 150px;">Student Name</th>
+                    {% for p in range(1, max_periods + 1) %}
+                    <th style="text-align: center;">Period {{ p }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in student_records %}
+                <tr>
+                    <td class="td-id" style="font-weight: 600; color: var(--text-main);">
+                        {{ record.student.name }}<br>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">{{ record.student.username }}</span>
+                    </td>
+                    {% for period in record.periods %}
+                    <td style="text-align: center; vertical-align: middle;">
+                        {% if period.status == 'Present' %}
+                        <div
+                            style="background: #e8f5e9; color: #2e7d32; padding: 0.4rem; border-radius: 8px; font-weight: 600; font-size: 0.8rem;">
+                            Present<br>
+                            <span style="font-size: 0.65rem; font-weight: normal;">{{ period.subject }}</span>
+                        </div>
+                        {% elif period.status == 'Absent' %}
+                        <div
+                            style="background: #ffebee; color: #c62828; padding: 0.4rem; border-radius: 8px; font-weight: 600; font-size: 0.8rem;">
+                            Absent<br>
+                            <span style="font-size: 0.65rem; font-weight: normal;">{{ period.subject }}</span>
+                        </div>
+                        {% else %}
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">
+                            - Free -
+                        </div>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="{{ max_periods + 1 }}"
+                        style="text-align: center; color: var(--text-muted); padding: 2rem;">No students found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .timetable-grid th,
+    .timetable-grid td {
+        border: 1px solid var(--border-inner);
+        padding: 1rem;
+    }
+
+    .timetable-grid {
+        width: 100%;
+        border-collapse: collapse;
+    }
+</style>
+{% endblock %}

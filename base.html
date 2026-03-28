@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SmartAttend - Facial Recognition System{% endblock %}</title>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    {% if current_user.is_authenticated %}
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="logo-box">
+                    <i class="fas fa-eye"></i>
+                </div>
+                <span>SmartAttend</span>
+            </div>
+
+            <nav class="nav-menu">
+                {% if current_user.role == 'teacher' %}
+                <a href="{{ url_for('teacher_dashboard') }}"
+                    class="nav-link {% if request.endpoint == 'teacher_dashboard' %}active{% endif %}">
+                    <i class="fas fa-home"></i>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                <a href="{{ url_for('attendance_by_date') }}"
+                    class="nav-link {% if request.endpoint == 'attendance_by_date' %}active{% endif %}">
+                    <i class="fas fa-calendar-day"></i>
+                    <span class="nav-text">Daily Reports</span>
+                </a>
+                <a href="{{ url_for('teacher_dashboard') }}"
+                    class="nav-link {% if request.endpoint == 'take_attendance' %}active{% endif %}">
+                    <i class="fas fa-expand"></i>
+                    <span class="nav-text">Take Attendance</span>
+                </a>
+                <a href="{{ url_for('register_student') }}"
+                    class="nav-link {% if request.endpoint == 'register_student' %}active{% endif %}">
+                    <i class="fas fa-user-plus"></i>
+                    <span class="nav-text">Register student</span>
+                </a>
+                <a href="{{ url_for('timetable') }}"
+                    class="nav-link {% if request.endpoint == 'timetable' %}active{% endif %}">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span class="nav-text">Timetable</span>
+                </a>
+                <a href="{{ url_for('export_attendance') }}" class="nav-link">
+                    <i class="fas fa-file-export"></i>
+                    <span class="nav-text">Export report</span>
+                </a>
+                {% else %}
+                <a href="{{ url_for('student_dashboard') }}" class="nav-link active">
+                    <i class="fas fa-home"></i>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                {% endif %}
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="faculty-info">
+                    Faculty: <b>{{ current_user.name }}</b>
+                </div>
+                <a href="{{ url_for('logout') }}" class="logout-link">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="nav-text">Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% else %}
+    {% block auth_content %}{% endblock %}
+    {% endif %}
+</body>
+
+</html>

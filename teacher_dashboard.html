@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h1>Teacher Dashboard</h1>
+    <p class="subtitle">Manage students and tracking</p>
+</header>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Today's Attendance</div>
+        <div class="stat-value">{{ todays_attendance }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Students</div>
+        <div class="stat-value" style="display: flex; justify-content: space-between; align-items: center;">
+            {{ total_students }}
+            <a href="{{ url_for('manage_students') }}" class="btn-login"
+                style="font-size: 0.75rem; padding: 0.3rem 0.6rem; background: var(--primary); color: white;">
+                <i class="fas fa-users-cog"></i> Manage
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="subject-section-title" style="display: flex; justify-content: space-between; align-items: center;">
+    <span>Subject Coverage (Class Averages)</span>
+    <button onclick="document.getElementById('addSubjectModal').style.display='flex'" class="btn-login"
+        style="font-size: 0.75rem; padding: 0.4rem 0.8rem; background: var(--card-bg); border: 1px solid var(--border-inner); color: var(--text-main);">
+        <i class="fas fa-plus"></i> Add Subject
+    </button>
+</div>
+
+<div class="subjects-grid">
+    {% for item in subjects %}
+    <div class="subject-card">
+        <div class="subject-header">
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <div class="subject-icon">
+                    <i class="fas {{ item.subject.icon }}"></i>
+                </div>
+                <div>
+                    <div class="subject-name">{{ item.subject.name }}</div>
+                    <div class="subject-logs">
+                        {{ item.logs }} logs / <b>{{ item.subject.total_hours }} total hours</b>
+                        <a href="javascript:void(0)"
+                            onclick="editHours({{ item.subject.id }}, '{{ item.subject.name }}', {{ item.subject.total_hours }})"
+                            style="margin-left: 0.5rem; color: var(--primary); font-size: 0.8rem;" title="Edit Hours">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <form action="{{ url_for('delete_subject', subject_id=item.subject.id) }}" method="POST"
+                            style="display: inline; margin-left: 0.5rem;"
+                            onsubmit="return confirm('Delete this subject and all its attendance records?');">
+                            <button type="submit"
+                                style="background: none; border: none; color: #ff4d4d; cursor: pointer; font-size: 0.8rem;"
+                                title="Delete Subject">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="subject-percentage">{{ item.percentage|round|int }}%</div>
+        </div>
+
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="width: {{ item.percentage }}%;"></div>
+        </div>
+
+        <a href="{{ url_for('take_attendance', subject_id=item.subject.id) }}" class="btn-start-session">
+            <i class="fas fa-play"></i> Start Session
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="table-section">
+    <div class="table-header">Student Attendance Overview</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Student ID</th>
+                <th>Full Name</th>
+                <th>Username</th>
+                <th>Attendance %</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in student_stats %}
+            <tr>
+                <td class="td-id">#{{ student.id }}</td>
+                <td>{{ student.name }}</td>
+                <td>{{ student.username }}</td>
+                <td class="td-percentage">{{ student.percentage|round|int }}%</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 2rem;">No students
+                    registered yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Add Subject Modal -->
+<div id="addSubjectModal"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div
+        style="background: var(--card-bg); padding: 2.5rem; border-radius: 24px; width: 90%; max-width: 450px; position: relative; box-shadow: var(--shadow); border: 1px solid var(--border-inner);">
+        <span onclick="document.getElementById('addSubjectModal').style.display='none'"
+            style="position: absolute; right: 1.5rem; top: 1.5rem; cursor: pointer; font-size: 1.5rem; color: var(--text-muted);">&times;</span>
+        <h3 style="margin-top: 0; margin-bottom: 2rem; color: var(--text-main); text-align: center;">Add New Subject</h3>
+        <form action="{{ url_for('add_subject') }}" method="POST">
+            <div class="form-group">
+                <label class="form-label">Subject Name</label>
+                <input type="text" name="name" class="form-control" required placeholder="e.g. Mathematics">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Total Hours</label>
+                <input type="number" name="hours" class="form-control" required placeholder="e.g. 40" min="1">
+            </div>
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <label class="form-label">Icon (FontAwesome Class)</label>
+                <input type="text" name="icon" class="form-control" placeholder="e.g. fa-book (leave blank for random)">
+            </div>
+            <button type="submit" class="btn-submit">Add Subject</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h1>Session: {{ subject.name }}</h1>
+    <p class="subtitle">Live face recognition and attendance scanning</p>
+</header>
+
+<div class="fullscreen-camera-container">
+    <div class="camera-stream-wrap">
+        <!-- Hidden video and canvas for capturing -->
+        <video id="videoElement" autoplay playsinline style="display:none; transform: scaleX(-1);"></video>
+        <canvas id="canvasElement" style="display:none;"></canvas>
+
+        <!-- Display processed frames from backend -->
+        <img id="processedStream" alt="Attendance Scan" class="camera-stream" src="">
+    </div>
+
+    <!-- Top Left: Session Info -->
+    <div class="overlay-info">
+        <div class="session-badge">
+            <i class="fas fa-video"></i> LIVE SESSION
+        </div>
+        <h1 class="session-title">{{ subject.name }}</h1>
+        <p class="verification-hint">
+            <i class="fas fa-info-circle"></i> Students must follow the on-screen action prompts to verify liveness.
+        </p>
+    </div>
+
+    <!-- Right Sidebar: Recent Attendance -->
+    <div class="overlay-sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-clipboard-check"></i>
+            <span>Present Today</span>
+        </div>
+        <div id="recentScans" class="scans-list">
+            <p class="loading-text">Initializing sensor...</p>
+        </div>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="overlay-controls">
+        <a href="{{ url_for('stop_attendance', subject_id=subject.id) }}" class="btn-stop">
+            <i class="fas fa-power-off"></i> Stop Session
+        </a>
+    </div>
+</div>
+
+<style>
+    /* Fullscreen Layout Overrides */
+    .sidebar {
+        display: none !important;
+    }
+
+    .main-content {
+        padding: 0 !important;
+        overflow: hidden !important;
+        margin-left: 0 !important;
+        width: 100vw !important;
+    }
+
+    .fullscreen-camera-container {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        background: #000;
+        overflow: hidden;
+    }
+
+    .camera-stream-wrap {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .camera-stream {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Info Overlay */
+    .overlay-info {
+        position: absolute;
+        top: 2rem;
+        left: 2rem;
+        z-index: 10;
+        pointer-events: none;
+    }
+
+    .session-badge {
+        background: rgba(135, 57, 250, 0.9);
+        color: white;
+        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        margin-bottom: 0.8rem;
+        width: fit-content;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .session-title {
+        color: white;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        margin: 0;
+        font-size: 2.2rem;
+    }
+
+    .verification-hint {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+
+    /* Sidebar Overlay */
+    .overlay-sidebar {
+        position: absolute;
+        top: 2rem;
+        right: 2rem;
+        bottom: 2rem;
+        width: 320px;
+        background: rgba(10, 9, 24, 0.75);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 24px;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .sidebar-header {
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        font-size: 1.1rem;
+    }
+
+    .sidebar-header i {
+        color: var(--primary);
+    }
+
+    .scans-list {
+        padding: 1.2rem;
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .scan-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+        border-radius: 16px;
+        animation: slideInRight 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .student-name {
+        font-weight: 500;
+        color: white;
+    }
+
+    .scan-time {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    /* Controls Overlay */
+    .overlay-controls {
+        position: absolute;
+        bottom: 2rem;
+        left: 2rem;
+        z-index: 10;
+    }
+
+    .btn-stop {
+        background: rgba(255, 60, 60, 0.9);
+        color: white;
+        text-decoration: none;
+        padding: 0.9rem 1.8rem;
+        border-radius: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 20px rgba(255, 60, 60, 0.3);
+    }
+
+    .btn-stop:hover {
+        transform: translateY(-3px);
+        background: rgba(255, 60, 60, 1);
+        box-shadow: 0 15px 30px rgba(255, 60, 60, 0.4);
+    }
+
+    .loading-text {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        text-align: center;
+        margin-top: 2rem;
+    }
+
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+</style>
+
+<script>
+    const subId = {{ subject.id }};
+    function updateScans() {
+        fetch(`/api/recent_attendance/${subId}`)
+            .then(res => res.json())
+            .then(data => {
+                const list = document.getElementById('recentScans');
+                if (data.attendances && data.attendances.length > 0) {
+                    list.innerHTML = '';
+                    data.attendances.forEach(att => {
+                        const div = document.createElement('div');
+                        div.className = "scan-item";
+                        div.setAttribute('style', "background: #25214a; padding: 1rem; border-radius: 12px; border-left: 4px solid var(--primary); display: flex; justify-content: space-between; align-items: center; pointer-events: auto;");
+                        div.innerHTML = `<span class="student-name">${att.name}</span> <span class="scan-time">${att.time}</span>`;
+                        list.appendChild(div);
+                    });
+                } else {
+                    list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Waiting for faces...</p>';
+                }
+            });
+    }
+    setInterval(updateScans, 2000);
+
+    // Browser camera capture
+    const video = document.getElementById('videoElement');
+    const canvas = document.getElementById('canvasElement');
+    const ctx = canvas.getContext('2d');
+    const processedStream = document.getElementById('processedStream');
+    let isProcessingFrame = false;
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 } } })
+            .then(function (stream) {
+                video.srcObject = stream;
+                // Start processing frames once video plays
+                video.onplay = () => {
+                    // Send 3 frames per second, sufficient for real-time tracking
+                    setInterval(processFrame, 300);
+                };
+            })
+            .catch(function (error) {
+                console.error("Camera access error:", error);
+                processedStream.alt = "Camera access denied. Please allow camera and refresh.";
+            });
+    }
+
+    function processFrame() {
+        if (isProcessingFrame || !video.videoWidth) return;
+        isProcessingFrame = true;
+
+        const targetWidth = 640;
+        const scale = Math.min(1, targetWidth / video.videoWidth);
+        canvas.width = video.videoWidth * scale;
+        canvas.height = video.videoHeight * scale;
+        // Don't mirror capture natively - backend mirrors or ignores orientation
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Lower quality to 0.7 to save bandwidth
+        const dataURL = canvas.toDataURL('image/jpeg', 0.7);
+
+        fetch(`/api/process_frame/${subId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: dataURL })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.image) {
+                    processedStream.src = data.image;
+                }
+                isProcessingFrame = false;
+            })
+            .catch(err => {
+                console.error("Frame processing error", err);
+                isProcessingFrame = false;
+            });
+    }
+
+    // Stop tracks when leaving page (e.g. Stop Session clicked)
+    window.addEventListener('beforeunload', () => {
+        if (video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+        }
+    });
+</script>
+{% endblock %}

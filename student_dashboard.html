@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h1>Student Dashboard</h1>
+    <p class="subtitle">Check your progress and attendance history</p>
+</header>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Hours Attended</div>
+        <div class="stat-value">{{ total_attended }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Overall Attendance</div>
+        <div class="stat-value">{{ overall_percentage|round|int }}%</div>
+    </div>
+</div>
+
+<div class="subject-section-title">Your Subject Attendance</div>
+<div class="subjects-grid">
+    {% for item in subject_attendance %}
+    <div class="subject-card">
+        <div class="subject-header">
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <div class="subject-icon">
+                    <i class="fas {{ item.subject.icon }}"></i>
+                </div>
+                <div>
+                    <div class="subject-name">{{ item.subject.name }}</div>
+                    <div class="subject-logs">{{ item.count }} / {{ item.subject.total_hours }} hours</div>
+                </div>
+            </div>
+            <div class="subject-percentage">{{ item.percentage|round|int }}%</div>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="width: {{ item.percentage }}%;"></div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="table-section">
+    <div class="table-header">Attendance History (Last 7 Days)</div>
+    <div style="overflow-x: auto;">
+        <table class="timetable-grid">
+            <thead>
+                <tr>
+                    <th style="min-width: 150px;">Date</th>
+                    {% for p in range(1, max_periods + 1) %}
+                    <th style="text-align: center;">Period {{ p }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in history_matrix %}
+                <tr>
+                    <td class="td-id" style="font-weight: 600; color: var(--text-main);">
+                        {{ record.date }}<br>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">{{ record.day_name }}</span>
+                    </td>
+                    {% for period in record.periods %}
+                    <td style="text-align: center; vertical-align: middle;">
+                        {% if period.status == 'Present' %}
+                        <div
+                            style="background: #e8f5e9; color: #2e7d32; padding: 0.4rem; border-radius: 8px; font-weight: 600; font-size: 0.8rem;">
+                            Present<br>
+                            <span style="font-size: 0.65rem; font-weight: normal;">{{ period.subject }}</span>
+                        </div>
+                        {% elif period.status == 'Absent' %}
+                        <div
+                            style="background: #ffebee; color: #c62828; padding: 0.4rem; border-radius: 8px; font-weight: 600; font-size: 0.8rem;">
+                            Absent<br>
+                            <span style="font-size: 0.65rem; font-weight: normal;">{{ period.subject }}</span>
+                        </div>
+                        {% else %}
+                        <div style="color: var(--text-muted); font-size: 0.8rem;">
+                            - Free -
+                        </div>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="{{ max_periods + 1 }}"
+                        style="text-align: center; color: var(--text-muted); padding: 2rem;">No attendance history
+                        calculated yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .timetable-grid th,
+    .timetable-grid td {
+        border: 1px solid var(--border-inner);
+        padding: 1rem;
+    }
+
+    .timetable-grid {
+        width: 100%;
+        border-collapse: collapse;
+    }
+</style>
+{% endblock %}

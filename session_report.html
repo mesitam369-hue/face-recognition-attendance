@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header>
+    <h1>Session Report</h1>
+    <p class="subtitle">{{ subject.name }} - {{ datetime.utcnow().strftime('%Y-%m-%d') }}</p>
+</header>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Present</div>
+        <div class="stat-value">{{ count }}</div>
+    </div>
+    <div class="stat-card" style="background: var(--card-bg); border: 1px solid var(--border-inner);">
+        <div class="stat-label" style="color: var(--text-muted);">Subject</div>
+        <div class="stat-value" style="font-size: 1.5rem; margin-top: 1rem;">{{ subject.name }}</div>
+    </div>
+</div>
+
+<div class="table-section">
+    <div class="table-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>Attendance Marked in This Session</span>
+        <a href="{{ url_for('teacher_dashboard') }}" class="btn-login"
+            style="font-size: 0.8rem; background: var(--primary);">
+            <i class="fas fa-home"></i> Back to Dashboard
+        </a>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Marked At</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for att in attendances %}
+            <tr>
+                <td>
+                    <div style="font-weight: 600;">{{ att.user.name }}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">ID: {{ att.user.username }}</div>
+                </td>
+                <td>{{ att.time.strftime('%H:%M:%S') }}</td>
+                <td><span style="color: #4CAF50; font-weight: 700;"><i class="fas fa-check-circle"></i> {{ att.status
+                        }}</span></td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                    No attendance was marked during this session.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
+    <a href="{{ url_for('take_attendance', subject_id=subject.id) }}" class="btn-start-session"
+        style="min-width: 200px;">
+        <i class="fas fa-redo"></i> Restart session
+    </a>
+    <a href="{{ url_for('export_attendance') }}" class="btn-submit"
+        style="min-width: 200px; margin: 0; background: var(--card-bg); border: 1px solid var(--border-inner);">
+        <i class="fas fa-file-export"></i> Export Report
+    </a>
+</div>
+{% endblock %}
