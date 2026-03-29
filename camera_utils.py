@@ -11,7 +11,8 @@ class VideoCamera:
         try:
          self.video = cv2.VideoCapture(0)
         except:
-         self.last_face_locations = []
+         self.video = None
+        self.last_face_locations = []
         self.last_frame = None
         self.success = False
         self.stopped = False
